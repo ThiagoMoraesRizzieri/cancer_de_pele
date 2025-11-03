@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Classificador de Pintas de Pele - CNN com Streamlit
-Autor: [Seu Nome]
+Versão com Suporte a Câmera Nativa do Celular
+Membros do grupo: Laís, Giovana, Thiago, Uilma, Viviane
 Data: Novembro 2025
 """
 
@@ -33,15 +34,7 @@ def carregar_modelo():
     # Se o modelo não existe localmente, baixar do Google Drive
     if not os.path.exists(modelo_path):
         with st.spinner('📥 Baixando modelo do Google Drive... (pode demorar alguns minutos)'):
-            # ===== IMPORTANTE: SUBSTITUA O ID ABAIXO! =====
-            # Para obter o ID do Google Drive:
-            # 1. Faça upload do modelo para o Google Drive
-            # 2. Botão direito no arquivo → Compartilhar
-            # 3. Configurar: "Qualquer pessoa com o link" (Leitor)
-            # 4. Copiar o link: https://drive.google.com/file/d/1ABC123XYZ/view
-            # 5. O ID é: 1ABC123XYZ
-
-            file_id = '1Hg2qY7VYH8r-LkxAbho9UMCVEFJbV4gn'
+            file_id = '1Hg2qY7VYH8r-LkxAbho9UMCVEFJbV4gn'  # ← SEU ID AQUI
             url = f'https://drive.google.com/uc?id={file_id}'
 
             try:
@@ -64,19 +57,8 @@ def carregar_modelo():
 def classificar_pinta(img, modelo, threshold=0.6):
     """
     Classifica uma imagem de pinta
-
-    Args:
-        img: imagem PIL
-        modelo: modelo Keras carregado
-        threshold: confiança mínima para aceitar a classificação (padrão: 60%)
-
-    Returns:
-        classe_predita: índice da classe predita
-        confianca: confiança da predição (0-100%)
-        predictions: array com todas as probabilidades
-        abaixo_threshold: boolean indicando se está abaixo do threshold
     """
-    # Lista de classes (AJUSTE SE NECESSÁRIO!)
+    # Lista de classes
     classes = [
         'Melanoma', 
         'Nevo Melanocítico', 
@@ -91,10 +73,10 @@ def classificar_pinta(img, modelo, threshold=0.6):
     if img.mode != 'RGB':
         img = img.convert('RGB')
 
-    # Processar imagem (AJUSTE O TAMANHO SE NECESSÁRIO!)
-    img_resized = img.resize((100, 75))  # Tamanho usado no treino
-    img_array = np.array(img_resized) / 255.0  # Normalização
-    img_array = np.expand_dims(img_array, axis=0)  # Adicionar dimensão do batch
+    # Processar imagem
+    img_resized = img.resize((100, 75))
+    img_array = np.array(img_resized) / 255.0
+    img_array = np.expand_dims(img_array, axis=0)
 
     # Fazer predição
     predictions = modelo.predict(img_array, verbose=0)
@@ -134,8 +116,7 @@ def main():
         max_value=100,
         value=60,
         step=5,
-        help="Se a confiança for menor que este valor, a classificação será considerada incerta. "
-             "Isso ajuda a identificar imagens inadequadas (ex: não é uma pinta, baixa qualidade, etc.)"
+        help="Se a confiança for menor que este valor, a classificação será considerada incerta."
     )
 
     st.sidebar.markdown("---")
@@ -143,10 +124,10 @@ def main():
     # Informações de uso
     st.sidebar.info(
         "**Como usar:**\n\n"
-        "1. Faça upload de uma foto da pinta\n"
+        "1. Escolha entre tirar foto ou carregar arquivo\n"
         "2. Aguarde a análise automática\n"
         "3. Veja os resultados e probabilidades\n\n"
-        "**Dica:** Use imagens claras, bem focadas e com boa iluminação para melhores resultados."
+        "**Dica:** Use imagens claras e bem focadas."
     )
 
     st.sidebar.markdown("---")
@@ -157,24 +138,45 @@ def main():
             "Este classificador utiliza uma Rede Neural Convolucional (CNN) "
             "treinada para identificar 7 tipos diferentes de lesões de pele."
         )
-        st.write("**Arquitetura:** CNN")
         st.write("**Input:** Imagens 100x75 pixels RGB")
-        st.write("**Output:** 7 classes")
+        st.write("**Output:** 7 classes de lesões")
 
     # ===== UPLOAD DE IMAGEM =====
-    st.header("📸 Upload da Imagem")
+    st.header("📸 Captura/Upload da Imagem")
 
-    uploaded_file = st.file_uploader(
-        "Escolha uma imagem da pinta",
-        type=['png', 'jpg', 'jpeg'],
-        help="Formatos aceitos: PNG, JPG, JPEG"
-    )
+    # Abas para escolher entre câmera e arquivo
+    tab1, tab2 = st.tabs(["📷 Tirar Foto (Câmera)", "📁 Carregar Arquivo"])
+
+    img = None
+
+    # ===== TAB 1: CÂMERA =====
+    with tab1:
+        st.write("**Clique em 'Ativar câmera' para tirar uma foto com o celular/webcam**")
+
+        # Widget de câmera do Streamlit
+        # IMPORTANTE: Isso funciona melhor se você SALVA a foto ANTES
+        picture = st.camera_input("Tire uma foto da pinta")
+
+        if picture is not None:
+            img = Image.open(picture)
+            st.success("✅ Foto capturada com sucesso!")
+
+    # ===== TAB 2: ARQUIVO =====
+    with tab2:
+        st.write("**Selecione um arquivo de imagem do seu dispositivo**")
+
+        uploaded_file = st.file_uploader(
+            "Escolha uma imagem da pinta",
+            type=['png', 'jpg', 'jpeg'],
+            help="Formatos aceitos: PNG, JPG, JPEG"
+        )
+
+        if uploaded_file is not None:
+            img = Image.open(uploaded_file)
+            st.success("✅ Imagem carregada com sucesso!")
 
     # ===== PROCESSAMENTO E EXIBIÇÃO DOS RESULTADOS =====
-    if uploaded_file is not None:
-
-        # Carregar e exibir imagem
-        img = Image.open(uploaded_file)
+    if img is not None:
 
         # Layout em duas colunas
         col1, col2 = st.columns(2)
@@ -200,7 +202,7 @@ def main():
                     img, modelo, threshold/100
                 )
 
-            # Lista de classes (mesma ordem da função classificar_pinta)
+            # Lista de classes
             classes = [
                 'Melanoma', 
                 'Nevo Melanocítico', 
@@ -213,21 +215,13 @@ def main():
 
             # ===== EXIBIR RESULTADO PRINCIPAL =====
             if abaixo_threshold:
-                # Classificação incerta (abaixo do threshold)
                 st.error(
                     f"⚠️ **Classificação Incerta**\n\n"
                     f"A confiança ({confianca:.1f}%) está abaixo do limite configurado ({threshold}%).\n\n"
                     f"**Possível classificação:** {classes[classe_predita]}\n\n"
-                    f"**Recomendação:** Esta imagem pode não ser adequada para classificação. "
-                    f"Possíveis causas:\n"
-                    f"- Imagem de baixa qualidade ou desfocada\n"
-                    f"- Ângulo inadequado ou iluminação ruim\n"
-                    f"- Não é uma lesão de pele\n"
-                    f"- Tipo de lesão diferente das classes conhecidas\n\n"
-                    f"**Por favor, consulte um médico especialista para avaliação adequada.**"
+                    f"**Recomendação:** Esta imagem pode não ser adequada para classificação."
                 )
             else:
-                # Classificação confiável
                 st.success(
                     f"📌 **Classificação:** {classes[classe_predita]}\n\n"
                     f"💯 **Confiança:** {confianca:.2f}%"
@@ -253,11 +247,7 @@ def main():
         # Criar gráfico de barras horizontais
         fig, ax = plt.subplots(figsize=(10, 6))
 
-        # Cores: vermelho para classe predita, azul para as outras
-        colors = ['#ff4444' if classes[i] == classes[classe_predita] else '#66b3ff' 
-                  for i in range(len(classes))]
-
-        # Reordenar cores para corresponder ao DataFrame ordenado
+        # Cores
         colors_sorted = ['#ff4444' if row['Classe'] == classes[classe_predita] else '#66b3ff' 
                         for _, row in df_probs.iterrows()]
 
@@ -302,7 +292,7 @@ def main():
         st.markdown("---")
         st.subheader("📚 Informações sobre a Classificação")
 
-        # Descrições das classes (pode personalizar)
+        # Descrições das classes
         descricoes = {
             'Melanoma': '⚠️ Tipo mais grave de câncer de pele. Requer atenção médica imediata.',
             'Nevo Melanocítico': 'Pinta comum, geralmente benigna. Monitore mudanças.',
@@ -320,7 +310,7 @@ def main():
 
     else:
         # Mensagem quando nenhuma imagem foi enviada
-        st.info("👆 Faça upload de uma imagem para começar a análise")
+        st.info("👆 Faça upload de uma imagem ou tire uma foto para começar a análise")
 
         # Exemplos de imagens adequadas
         with st.expander("💡 Dicas para Melhores Resultados"):
@@ -335,8 +325,7 @@ def main():
                 "- Imagens desfocadas ou tremidas\n"
                 "- Iluminação muito fraca ou muito forte\n"
                 "- Fotos de longe (pinta muito pequena)\n"
-                "- Imagens editadas ou com filtros\n"
-                "- Fotos de telas de computador"
+                "- Imagens editadas ou com filtros"
             )
 
     # ===== RODAPÉ =====
