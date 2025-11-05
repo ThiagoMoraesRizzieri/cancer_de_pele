@@ -34,7 +34,7 @@ def carregar_modelo():
     # Se o modelo não existe localmente, baixar do Google Drive
     if not os.path.exists(modelo_path):
         with st.spinner('📥 Baixando modelo do Google Drive... (pode demorar alguns minutos)'):
-            file_id = '1Hg2qY7VYH8r-LkxAbho9UMCVEFJbV4gn'  # ← SEU ID AQUI
+            file_id = '1txLANRcl_00BcFWdvAg90byaHwKhxIYR'  # ← SEU ID AQUI
             url = f'https://drive.google.com/uc?id={file_id}'
 
             try:
@@ -342,3 +342,4 @@ def main():
 # ===== EXECUTAR APLICAÇÃO =====
 if __name__ == "__main__":
     main()
+
