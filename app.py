@@ -95,6 +95,7 @@ def main():
     # ===== TÍTULO E CABEÇALHO =====
     st.title("🔬 Classificador de Pintas de Pele")
     st.markdown("### Análise automatizada usando Deep Learning (CNN)")
+    st.markdown("Membros do grupo: Laís, Giovana, Thiago, Uilma, Viviane")
     st.markdown("---")
 
     # ===== AVISO IMPORTANTE =====
@@ -396,3 +397,4 @@ def main():
 # ===== EXECUTAR APLICAÇÃO =====
 if __name__ == "__main__":
     main()
+
