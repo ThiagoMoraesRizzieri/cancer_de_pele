@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 Classificador de Pintas de Pele - CNN com Streamlit
-Versão com Câmera Traseira Nativa para Celular
+Versão Original com Instruções para Câmera Traseira
 Membros do grupo: Laís, Giovana, Thiago, Uilma, Viviane
 Data: Novembro 2025
 """
 
 import streamlit as st
-import streamlit.components.v1 as components
 import numpy as np
 from tensorflow import keras
 from PIL import Image
@@ -15,8 +14,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import gdown
 import os
-import base64
-from io import BytesIO
 
 # ===== CONFIGURAÇÃO DA PÁGINA =====
 st.set_page_config(
@@ -55,203 +52,6 @@ def carregar_modelo():
     except Exception as e:
         st.error(f'❌ Erro ao carregar modelo: {e}')
         st.stop()
-
-# ===== COMPONENTE DE CÂMERA TRASEIRA =====
-def camera_traseira():
-    """
-    Componente HTML customizado que força câmera traseira no celular
-    Permite alternar entre câmera frontal e traseira
-    """
-    html_code = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-            body {
-                margin: 0;
-                padding: 10px;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                background: #f0f2f6;
-            }
-            #videoContainer {
-                position: relative;
-                width: 100%;
-                max-width: 640px;
-                margin: 0 auto;
-                background: #000;
-                border-radius: 12px;
-                overflow: hidden;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            }
-            #video {
-                width: 100%;
-                display: block;
-            }
-            #canvas {
-                display: none;
-            }
-            .button-container {
-                text-align: center;
-                margin-top: 20px;
-            }
-            button {
-                background: linear-gradient(135deg, #FF4B4B 0%, #FF6B6B 100%);
-                color: white;
-                border: none;
-                padding: 15px 30px;
-                font-size: 16px;
-                font-weight: 600;
-                border-radius: 8px;
-                cursor: pointer;
-                margin: 5px;
-                transition: all 0.3s ease;
-                box-shadow: 0 4px 8px rgba(255, 75, 75, 0.3);
-            }
-            button:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 12px rgba(255, 75, 75, 0.4);
-            }
-            button:active {
-                transform: translateY(0);
-            }
-            button:disabled {
-                background: #cccccc;
-                cursor: not-allowed;
-                box-shadow: none;
-            }
-            #status {
-                text-align: center;
-                margin: 15px 0;
-                padding: 12px;
-                background: white;
-                border-radius: 8px;
-                color: #333;
-                font-weight: 500;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
-            .emoji {
-                font-size: 24px;
-                margin-right: 8px;
-            }
-        </style>
-    </head>
-    <body>
-        <div id="status">🎥 Inicializando câmera...</div>
-        <div id="videoContainer">
-            <video id="video" autoplay playsinline muted></video>
-        </div>
-        <canvas id="canvas"></canvas>
-        <div class="button-container">
-            <button id="captureBtn" onclick="capturarFoto()">
-                <span class="emoji">📸</span>Capturar Foto
-            </button>
-            <button id="switchBtn" onclick="trocarCamera()">
-                <span class="emoji">🔄</span>Trocar Câmera
-            </button>
-        </div>
-
-        <script>
-            let stream = null;
-            let usarCameraTraseira = true;
-
-            async function iniciarCamera() {
-                try {
-                    // Parar stream anterior se existir
-                    if (stream) {
-                        stream.getTracks().forEach(track => track.stop());
-                    }
-
-                    // Configurar para câmera traseira (environment) ou frontal (user)
-                    const constraints = {
-                        video: {
-                            facingMode: usarCameraTraseira ? { exact: "environment" } : "user",
-                            width: { ideal: 1920 },
-                            height: { ideal: 1080 }
-                        },
-                        audio: false
-                    };
-
-                    stream = await navigator.mediaDevices.getUserMedia(constraints);
-                    const video = document.getElementById('video');
-                    video.srcObject = stream;
-
-                    const cameraType = usarCameraTraseira ? '📱 Câmera Traseira' : '🤳 Câmera Frontal';
-                    document.getElementById('status').innerHTML = 
-                        `✅ <strong>${cameraType}</strong> ativada`;
-
-                } catch (err) {
-                    console.error('Erro ao acessar câmera:', err);
-                    
-                    // Fallback para câmera frontal se traseira não funcionar
-                    if (usarCameraTraseira && err.name === 'OverconstrainedError') {
-                        document.getElementById('status').innerHTML = 
-                            '⚠️ Câmera traseira não disponível. Tentando frontal...';
-                        usarCameraTraseira = false;
-                        setTimeout(iniciarCamera, 1000);
-                    } else {
-                        document.getElementById('status').innerHTML = 
-                            '❌ <strong>Erro:</strong> ' + err.message;
-                    }
-                }
-            }
-
-            function trocarCamera() {
-                usarCameraTraseira = !usarCameraTraseira;
-                document.getElementById('status').innerHTML = '🔄 Trocando câmera...';
-                iniciarCamera();
-            }
-
-            function capturarFoto() {
-                const video = document.getElementById('video');
-                const canvas = document.getElementById('canvas');
-                const context = canvas.getContext('2d');
-
-                // Configurar tamanho do canvas igual ao vídeo
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-
-                // Desenhar frame atual do vídeo no canvas
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                // Converter para base64 JPEG (qualidade 95%)
-                const imageData = canvas.toDataURL('image/jpeg', 0.95);
-
-                // Enviar para Streamlit
-                window.parent.postMessage({
-                    type: 'streamlit:setComponentValue',
-                    value: imageData
-                }, '*');
-
-                // Feedback visual
-                document.getElementById('status').innerHTML = 
-                    '✅ <strong>Foto capturada!</strong> Aguarde o processamento...';
-                
-                // Efeito de flash (opcional)
-                video.style.opacity = '0.3';
-                setTimeout(() => { video.style.opacity = '1'; }, 200);
-            }
-
-            // Iniciar câmera quando página carregar
-            window.addEventListener('load', () => {
-                iniciarCamera();
-            });
-
-            // Limpar stream quando sair da página
-            window.addEventListener('beforeunload', () => {
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                }
-            });
-        </script>
-    </body>
-    </html>
-    """
-    
-    # Renderizar componente HTML
-    image_data = components.html(html_code, height=650, scrolling=False)
-    
-    return image_data
 
 # ===== FUNÇÃO DE CLASSIFICAÇÃO =====
 def classificar_pinta(img, modelo, threshold=0.6):
@@ -325,7 +125,7 @@ def main():
     st.sidebar.info(
         "**Como usar:**\n\n"
         "1. Escolha entre tirar foto ou carregar arquivo\n"
-        "2. **Câmera Traseira:** Use o botão 🔄 para trocar\n"
+        "2. **Para usar câmera traseira:** Toque no ícone 🔄 que aparece na câmera\n"
         "3. Aguarde a análise automática\n"
         "4. Veja os resultados e probabilidades\n\n"
         "**Dica:** Use imagens claras e bem focadas."
@@ -347,40 +147,51 @@ def main():
     st.header("📸 Captura/Upload da Imagem")
 
     # Abas para escolher entre câmera e arquivo
-    tab1, tab2 = st.tabs(["📷 Câmera do Celular", "📁 Carregar Arquivo"])
+    tab1, tab2 = st.tabs(["📷 Tirar Foto (Câmera)", "📁 Carregar Arquivo"])
 
     img = None
 
-    # ===== TAB 1: CÂMERA TRASEIRA =====
+    # ===== TAB 1: CÂMERA =====
     with tab1:
-        st.write("**📱 Tire uma foto com a câmera do celular**")
+        st.write("**📱 Instruções para usar a câmera traseira:**")
+        
+        # Instruções visuais com destaque
         st.info(
-            "💡 **Dica:** A câmera traseira inicia automaticamente. "
-            "Use o botão 🔄 **Trocar Câmera** se quiser alternar."
+            "**Passo a passo:**\n\n"
+            "1️⃣ Clique em **'Ativar câmera'** abaixo\n\n"
+            "2️⃣ Quando a câmera abrir, procure o ícone **🔄** (geralmente no canto superior ou inferior)\n\n"
+            "3️⃣ Toque no ícone 🔄 para **alternar para a câmera traseira**\n\n"
+            "4️⃣ Posicione a pinta no centro e tire a foto\n\n"
+            "💡 **Dica:** Se não encontrar o ícone 🔄, use a aba 'Carregar Arquivo' e tire foto com o app de câmera do celular"
         )
         
-        # Usar componente customizado de câmera
-        image_data = camera_traseira()
-        
-        if image_data:
-            try:
-                # Remover prefixo base64 se existir
-                if isinstance(image_data, str) and 'base64,' in image_data:
-                    image_data = image_data.split('base64,')[1]
-                
-                # Decodificar base64
-                image_bytes = base64.b64decode(image_data)
-                img = Image.open(BytesIO(image_bytes))
-                
-                st.success("✅ Foto capturada com sucesso!")
-                
-            except Exception as e:
-                st.error(f"❌ Erro ao processar imagem: {e}")
-                img = None
+        # Alertas adicionais
+        with st.expander("❓ Não consegue trocar a câmera?"):
+            st.write(
+                "**Alternativa 1:** Use a aba '📁 Carregar Arquivo'\n"
+                "- Abra o app de câmera do celular\n"
+                "- Tire a foto com a câmera traseira\n"
+                "- Volte aqui e faça upload da foto\n\n"
+                "**Alternativa 2:** Alguns navegadores não permitem escolher a câmera\n"
+                "- Tente usar o Chrome ou Safari\n"
+                "- Dê permissão de acesso à câmera quando solicitado"
+            )
+
+        # Widget de câmera do Streamlit
+        picture = st.camera_input("Ativar câmera")
+
+        if picture is not None:
+            img = Image.open(picture)
+            st.success("✅ Foto capturada com sucesso!")
 
     # ===== TAB 2: ARQUIVO =====
     with tab2:
         st.write("**Selecione um arquivo de imagem do seu dispositivo**")
+        
+        st.info(
+            "💡 **Recomendado:** Tire a foto com o aplicativo de câmera do celular e depois faça upload aqui. "
+            "Assim você tem controle total sobre qual câmera usar!"
+        )
 
         uploaded_file = st.file_uploader(
             "Escolha uma imagem da pinta",
@@ -474,7 +285,7 @@ def main():
         # Criar gráfico de barras horizontais
         fig, ax = plt.subplots(figsize=(10, 6))
 
-        # Cores: vermelho para classe predita, azul para outras
+        # Cores
         colors_sorted = ['#ff4444' if row['Classe'] == classes[classe_predita] else '#66b3ff' 
                         for _, row in df_probs.iterrows()]
 
@@ -519,7 +330,7 @@ def main():
         st.markdown("---")
         st.subheader("📚 Informações sobre a Classificação")
 
-        # Descrições das classes (baseado em HAM10000)
+        # Descrições das classes
         descricoes = {
             'Queratose Actínica': '⚠️ Lesão pré-cancerosa causada por exposição solar. Pode evoluir para câncer. **Consulte um dermatologista!**',
             'Carcinoma Basocelular': '🔴 Tipo mais comum de câncer de pele. Crescimento lento mas requer tratamento. **Consulte um dermatologista imediatamente!**',
